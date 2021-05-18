@@ -12,6 +12,7 @@ const adminSchema = new Schema({
     required: [true, "Password can't be blank"],
   },
 });
+
 adminSchema.statics.findAndValidate = async function (username, password) {
     const foundUser = await this.findOne({ username });
     const isvalid = await bcrypt.compare(password, foundUser.password);
