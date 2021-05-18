@@ -1,0 +1,20 @@
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const Schema = mongoose.Schema;
+const vendorSchema = new Schema({
+  username: {
+    type: String,
+    required: [true, "Username can't be blank"],
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: [true, "Password can't be blank"],
+  },
+});
+vendorSchema.statics.findAndValidate = async function (username, password) {
+    const foundUser = await this.findOne({ username });
+    const isvalid = await bcrypt.compare(password, foundUser.password);
+    return isvalid ? foundUser : false;
+}
+module.exports = mongoose.model('Vendor', vendorSchema);
