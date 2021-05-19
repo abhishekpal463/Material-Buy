@@ -5,6 +5,9 @@ const localstrategy = require("passport-local");
 const flash = require("connect-flash");
 const passport = require("passport");
 const User = require("../models/user");
+const crypto = require('crypto');
+
+const sendEmail = require('./email');
 const router = express.Router();
 
 const sessionconfig = {
@@ -14,8 +17,8 @@ const sessionconfig = {
     saveUninitialized: true,
     cookie: {
       httpOnly: true,
-      expires: Date.now() +  60 * 60 * 24 * 7,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      expires: Date.now() +  1000 * 60 * 60 * 24,
+      maxAge: 1000 * 60 * 60 * 24,
     },
   };
 
@@ -96,6 +99,63 @@ router.post("/logout", function (req, res) {
     res.redirect("/");
   });
   
+router.get("/forgetuser",(req,res)=>{
+  res.render('forgetuser');
+});
+
+router.post('/forgetuser',async (req,res)=>{
+  const email=req.body.email;
+  const user = await User.findOne({email:email});
+  if(!user){
+    console.log("No User Exits...");
+    res.redirect("/");    
+  }
+  const resetToken = user.createPasswordResetToken();
+  await user.save();
+  const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
+
+  const message = `Forget your password to ${resetURL}`;
+try{
+  await sendEmail({
+    email:user.email,
+    subject:'Your password reset token valid for 10 min',
+    message
+  });
+
+  res.status(200).json({
+    status:'success',
+    message:"token sent to email"
+  });
+}
+catch(error){
+  user.passwordResetToken=undefined;
+  user.passwordResetExpires=undefined;
+  await user.save();
+  console.log("there is error in sending email");
+}
+});
+
+
+/////////////////////////////////////////////////////////////////////////////////
+
+
+router.patch('/resetUserPassword/:token', async(req,res)=>{
+  const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+  const user =await User.findOne({
+    createPasswordResetToken:hashedToken,
+    passwwordResetExpires:{$gt:Date.now()} 
+  });
+  if(!user){
+    console.log("Token is expired or expired");
+    res.redirect("/");
+  }else{
+    user.password=req.body.password;
+    user.passwordResetExpires=undefined;
+    user.passwordResetToken=undefined;
+  }
+  await user.save();
+});
 
 
 module.exports = router;
