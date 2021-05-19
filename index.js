@@ -21,6 +21,7 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+app.use('/profile',express.static(path.join(__dirname, "/routes/profile")));
 
 //ADMIN
 
@@ -36,6 +37,6 @@ const user=require('./routes/user');
 app.use("/",user);
 
 
-app.listen(5000, function () {
-  console.log("On port 5000");
+app.listen(3000, function () {
+  console.log("On port 3000");
 });
